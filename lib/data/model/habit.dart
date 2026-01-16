@@ -20,6 +20,12 @@ class Habit {
   
   /// 备注
   final String notes;
+  
+  /// 习惯颜色
+  final int color;
+  
+  /// 习惯图标
+  final String icon;
 
   /// 构造函数
   Habit({
@@ -30,6 +36,8 @@ class Habit {
     this.moneyPerUnit = 0.0,
     this.timePerUnit = 0,
     this.notes = '',
+    this.color = 0xFF4CAF50, // 默认绿色
+    this.icon = 'icon_default', // 默认图标
   });
 
   /// 从Map创建Habit实例
@@ -42,6 +50,8 @@ class Habit {
       moneyPerUnit: map['moneyPerUnit'] ?? 0.0,
       timePerUnit: map['timePerUnit'] ?? 0,
       notes: map['notes'] ?? '',
+      color: map['color'] ?? 0xFF4CAF50,
+      icon: map['icon'] ?? 'icon_default',
     );
   }
 
@@ -55,6 +65,8 @@ class Habit {
       'moneyPerUnit': moneyPerUnit,
       'timePerUnit': timePerUnit,
       'notes': notes,
+      'color': color,
+      'icon': icon,
     };
   }
 
@@ -100,6 +112,8 @@ class Habit {
     double? moneyPerUnit,
     int? timePerUnit,
     String? notes,
+    int? color,
+    String? icon,
   }) {
     return Habit(
       id: id ?? this.id,
@@ -109,6 +123,8 @@ class Habit {
       moneyPerUnit: moneyPerUnit ?? this.moneyPerUnit,
       timePerUnit: timePerUnit ?? this.timePerUnit,
       notes: notes ?? this.notes,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
     );
   }
 }

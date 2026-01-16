@@ -1,18 +1,23 @@
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:csv/csv.dart';
 import '../model/habit.dart';
 import '../database/app_database.dart';
+import 'dart:io' as io;
+import 'package:path_provider/path_provider.dart';
 
 /// CSV备份管理器
 class CsvBackupManager {
   /// 导出所有习惯数据到CSV文件
-  Future<File> exportHabits() async {
+  Future<io.File> exportHabits() async {
+    if (kIsWeb) {
+      throw UnsupportedError('CSV export is not supported on web platform');
+    }
+    
     final habits = await AppDatabase.instance.getAllHabits();
     
     // 准备CSV数据
     final csvData = [
-      ['id', 'name', 'startDate', 'lastResetDate', 'moneyPerUnit', 'timePerUnit', 'notes'],
+      ['id', 'name', 'startDate', 'lastResetDate', 'moneyPerUnit', 'timePerUnit', 'notes', 'color', 'icon'],
       for (var habit in habits)
         [
           habit.id.toString(),
@@ -22,6 +27,8 @@ class CsvBackupManager {
           habit.moneyPerUnit.toString(),
           habit.timePerUnit.toString(),
           habit.notes,
+          habit.color.toString(),
+          habit.icon,
         ],
     ];
     
@@ -30,7 +37,7 @@ class CsvBackupManager {
     
     // 创建文件
     final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/quitday_backup_${DateTime.now().toIso8601String().split('T')[0]}.csv');
+    final file = io.File('${directory.path}/quitday_backup_${DateTime.now().toIso8601String().split('T')[0]}.csv');
     
     // 写入数据
     await file.writeAsString(csvString);
@@ -39,7 +46,11 @@ class CsvBackupManager {
   }
 
   /// 从CSV文件导入习惯数据
-  Future<List<Habit>> importHabits(File file) async {
+  Future<List<Habit>> importHabits(io.File file) async {
+    if (kIsWeb) {
+      throw UnsupportedError('CSV import is not supported on web platform');
+    }
+    
     final csvString = await file.readAsString();
     
     // 解析CSV数据
@@ -60,6 +71,8 @@ class CsvBackupManager {
         moneyPerUnit: double.tryParse(data[4].toString()) ?? 0.0,
         timePerUnit: int.tryParse(data[5].toString()) ?? 0,
         notes: data[6].toString(),
+        color: data.length > 7 ? int.tryParse(data[7].toString()) ?? 0xFF4CAF50 : 0xFF4CAF50,
+        icon: data.length > 8 ? data[8].toString() : 'icon_default',
       );
       habits.add(habit);
     }

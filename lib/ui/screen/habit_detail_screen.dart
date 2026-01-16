@@ -247,11 +247,16 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       // 标记今天已坚持
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('今天已坚持！')),
+                        const SnackBar(content: Text('今天已坚持！继续保持！')),
                       );
+                      
+                      // 可以在这里添加更多功能，比如：
+                      // 1. 记录坚持的日期到数据库
+                      // 2. 显示坚持的天数统计
+                      // 3. 发送通知或提醒
                     },
                     child: const Text('今天坚持住了'),
                   ),

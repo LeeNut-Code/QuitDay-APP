@@ -16,6 +16,7 @@ class MyApp extends StatelessWidget {
       create: (context) => HabitProvider(),
       child: MaterialApp.router(
         title: 'QuitDay',
+        debugShowCheckedModeBanner: false, // 去除debug标记
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),

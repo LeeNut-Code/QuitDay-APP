@@ -1,6 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:io' as io;
 import '../../data/backup/csv_backup_manager.dart';
 import '../../data/backup/webdav_backup_manager.dart';
 
@@ -35,10 +36,17 @@ class _BackupScreenState extends State<BackupScreen> {
     });
 
     try {
-      final file = await _csvManager.exportHabits();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('备份已导出到: ${file.path}')),
-      );
+      if (kIsWeb) {
+        // Web平台不支持文件系统操作，显示提示信息
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Web平台暂不支持CSV导出功能')),
+        );
+      } else {
+        final file = await _csvManager.exportHabits();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('备份已成功导出')),
+        );
+      }
     } catch (e) {
       print('Error exporting CSV: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -58,25 +66,32 @@ class _BackupScreenState extends State<BackupScreen> {
     });
 
     try {
-      // 这里简化处理，实际应用中应该使用文件选择器
-      final directory = await getApplicationDocumentsDirectory();
-      final files = directory.listSync().where((file) => file.path.endsWith('.csv')).toList();
-      
-      if (files.isEmpty) {
+      if (kIsWeb) {
+        // Web平台不支持文件系统操作，显示提示信息
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('没有找到CSV备份文件')),
+          const SnackBar(content: Text('Web平台暂不支持CSV导入功能')),
         );
-        return;
+      } else {
+        // 这里简化处理，实际应用中应该使用文件选择器
+        final directory = await getApplicationDocumentsDirectory();
+        final files = directory.listSync().where((file) => file.path.endsWith('.csv')).toList();
+        
+        if (files.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('没有找到CSV备份文件')),
+          );
+          return;
+        }
+        
+        // 选择最新的备份文件
+        files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+        final file = files.first;
+        
+        final habits = await _csvManager.importHabits(io.File(file.path));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('成功导入 ${habits.length} 个习惯')),
+        );
       }
-      
-      // 选择最新的备份文件
-      files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
-      final file = files.first;
-      
-      final habits = await _csvManager.importHabits(File(file.path));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('成功导入 ${habits.length} 个习惯')),
-      );
     } catch (e) {
       print('Error importing CSV: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,10 +196,17 @@ class _BackupScreenState extends State<BackupScreen> {
       _backupFiles.sort((a, b) => b.compareTo(a));
       final file = await _webDavManager.downloadBackup(_backupFiles.first);
       
-      final habits = await _csvManager.importHabits(file);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('成功从WebDAV导入 ${habits.length} 个习惯')),
-      );
+      // WebDAV下载的文件类型可能不同，需要根据实际情况处理
+      if (file is io.File) {
+        final habits = await _csvManager.importHabits(file);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('成功从WebDAV导入 ${habits.length} 个习惯')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('文件类型不支持')),
+        );
+      }
     } catch (e) {
       print('Error downloading from WebDAV: $e');
       ScaffoldMessenger.of(context).showSnackBar(

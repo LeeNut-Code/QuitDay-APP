@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../data/database/app_database.dart';
 import '../data/model/habit.dart';
 
@@ -37,6 +38,8 @@ class HabitProvider extends ChangeNotifier {
       final id = await AppDatabase.instance.insertHabit(habit);
       final newHabit = habit.copyWith(id: id);
       _habits.add(newHabit);
+      
+      // 对于Web平台，AppDatabase已经处理了webHabits的更新
     } catch (e) {
       print('Error adding habit: $e');
     } finally {
