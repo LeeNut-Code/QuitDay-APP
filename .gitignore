@@ -75,3 +75,6 @@ yarn-error.log
 # Temporary files
 gradle.zip
 cmdline-tools.zip
+
+# Project specific
+开发记录/
