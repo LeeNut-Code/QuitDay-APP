@@ -15,6 +15,7 @@ class AppDatabase {
   // Web平台的本地存储键
   static const String _webHabitsKey = 'quitday_web_habits';
   static const String _webNextIdKey = 'quitday_web_next_id';
+  static const String _webMarkedDaysKey = 'quitday_web_marked_days';
 
   // 构造函数
   AppDatabase._privateConstructor();
@@ -96,7 +97,7 @@ class AppDatabase {
     
     return await openDatabase(
       path,
-      version: 2, // 增加版本号
+      version: 3, // 增加版本号
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase, // 添加升级回调
     );
@@ -117,6 +118,18 @@ class AppDatabase {
         icon TEXT DEFAULT 'icon_default'
       )
     ''');
+    
+    await db.execute('''
+      CREATE TABLE marked_days (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        habit_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+      )
+    ''');
   }
   
   /// 升级数据库表
@@ -125,6 +138,21 @@ class AppDatabase {
       // 添加color和icon字段
       await db.execute('ALTER TABLE habits ADD COLUMN color INTEGER DEFAULT 0xFF4CAF50');
       await db.execute('ALTER TABLE habits ADD COLUMN icon TEXT DEFAULT \'icon_default\'');
+    }
+    
+    if (oldVersion < 3) {
+      // 添加marked_days表
+      await db.execute('''
+        CREATE TABLE marked_days (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          habit_id INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+        )
+      ''');
     }
   }
 
@@ -247,6 +275,132 @@ class AppDatabase {
       {'lastResetDate': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  /// 从localStorage获取标记日期数据
+  List<MarkedDay> _getWebMarkedDays() {
+    if (!kIsWeb) return [];
+    
+    try {
+      final storage = window.localStorage;
+      final markedDaysJson = storage[_webMarkedDaysKey];
+      if (markedDaysJson == null) return [];
+      
+      final markedDaysList = jsonDecode(markedDaysJson) as List<dynamic>;
+      return markedDaysList.map((markedDayJson) => MarkedDay.fromMap(markedDayJson as Map<String, dynamic>)).toList();
+    } catch (e) {
+      print('Error getting web marked days: $e');
+      return [];
+    }
+  }
+
+  /// 保存标记日期数据到localStorage
+  void _saveWebMarkedDays(List<MarkedDay> markedDays) {
+    if (!kIsWeb) return;
+    
+    try {
+      final storage = window.localStorage;
+      final markedDaysJson = jsonEncode(markedDays.map((markedDay) => markedDay.toMap()).toList());
+      storage[_webMarkedDaysKey] = markedDaysJson;
+    } catch (e) {
+      print('Error saving web marked days: $e');
+    }
+  }
+
+  /// 插入标记日期
+  Future<int> insertMarkedDay(MarkedDay markedDay) async {
+    if (kIsWeb) {
+      // Web平台使用localStorage存储
+      final markedDays = _getWebMarkedDays();
+      final newMarkedDay = markedDay.copyWith(
+        id: markedDays.isNotEmpty ? markedDays.last.id! + 1 : 1,
+      );
+      markedDays.add(newMarkedDay);
+      _saveWebMarkedDays(markedDays);
+      return newMarkedDay.id!;
+    }
+    
+    final db = await database;
+    return await db.insert('marked_days', markedDay.toMap());
+  }
+
+  /// 获取习惯的所有标记日期
+  Future<List<MarkedDay>> getMarkedDaysByHabitId(int habitId) async {
+    if (kIsWeb) {
+      // Web平台从localStorage存储中查找
+      final markedDays = _getWebMarkedDays();
+      return markedDays.where((markedDay) => markedDay.habitId == habitId).toList();
+    }
+    
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'marked_days',
+      where: 'habit_id = ?',
+      whereArgs: [habitId],
+      orderBy: 'date DESC',
+    );
+    return List.generate(maps.length, (i) => MarkedDay.fromMap(maps[i]));
+  }
+
+  /// 更新标记日期
+  Future<int> updateMarkedDay(MarkedDay markedDay) async {
+    if (kIsWeb) {
+      // Web平台更新localStorage存储
+      final markedDays = _getWebMarkedDays();
+      final index = markedDays.indexWhere((md) => md.id == markedDay.id);
+      if (index != -1) {
+        markedDays[index] = markedDay;
+        _saveWebMarkedDays(markedDays);
+        return 1;
+      }
+      return 0;
+    }
+    
+    final db = await database;
+    return await db.update(
+      'marked_days',
+      markedDay.toMap(),
+      where: 'id = ?',
+      whereArgs: [markedDay.id],
+    );
+  }
+
+  /// 删除标记日期
+  Future<int> deleteMarkedDay(int id) async {
+    if (kIsWeb) {
+      // Web平台从localStorage存储中删除
+      final markedDays = _getWebMarkedDays();
+      final initialLength = markedDays.length;
+      markedDays.removeWhere((md) => md.id == id);
+      _saveWebMarkedDays(markedDays);
+      return initialLength - markedDays.length;
+    }
+    
+    final db = await database;
+    return await db.delete(
+      'marked_days',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// 删除习惯的所有标记日期
+  Future<int> deleteMarkedDaysByHabitId(int habitId) async {
+    if (kIsWeb) {
+      // Web平台从localStorage存储中删除
+      final markedDays = _getWebMarkedDays();
+      final initialLength = markedDays.length;
+      markedDays.removeWhere((md) => md.habitId == habitId);
+      _saveWebMarkedDays(markedDays);
+      return initialLength - markedDays.length;
+    }
+    
+    final db = await database;
+    return await db.delete(
+      'marked_days',
+      where: 'habit_id = ?',
+      whereArgs: [habitId],
     );
   }
 }

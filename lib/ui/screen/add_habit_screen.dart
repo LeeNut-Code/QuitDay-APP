@@ -19,8 +19,6 @@ class AddHabitScreen extends StatefulWidget {
 class _AddHabitScreenState extends State<AddHabitScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _moneyController = TextEditingController();
-  final _timeController = TextEditingController();
   final _notesController = TextEditingController();
   
   DateTime _startDate = DateTime.now();
@@ -52,8 +50,6 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
       final habit = await AppDatabase.instance.getHabit(widget.habitId!);
       if (habit != null) {
         _nameController.text = habit.name;
-        _moneyController.text = habit.moneyPerUnit.toString();
-        _timeController.text = habit.timePerUnit.toString();
         _notesController.text = habit.notes;
         _startDate = habit.startDate;
         _selectedColor = habit.color;
@@ -81,8 +77,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
         id: widget.habitId ?? 0,
         name: _nameController.text.trim(),
         startDate: _startDate,
-        moneyPerUnit: double.tryParse(_moneyController.text) ?? 0.0,
-        timePerUnit: int.tryParse(_timeController.text) ?? 0,
+        moneyPerUnit: 0.0,
+        timePerUnit: 0,
         notes: _notesController.text.trim(),
         color: _selectedColor,
         icon: _selectedIcon,
@@ -109,19 +105,36 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     }
   }
 
-  /// 选择日期
-  Future<void> _selectDate(BuildContext context) async {
-    final picked = await showDatePicker(
+  /// 选择日期和时间
+  Future<void> _selectDateTime(BuildContext context) async {
+    // 选择日期
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: _startDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (picked != null && picked != _startDate) {
-      setState(() {
-        _startDate = picked;
-      });
-    }
+    
+    if (pickedDate == null) return;
+    
+    // 选择时间
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_startDate),
+    );
+    
+    if (pickedTime == null) return;
+    
+    // 合并日期和时间
+    setState(() {
+      _startDate = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
   }
 
   /// 选择颜色
@@ -264,17 +277,17 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              // 开始日期
+              // 开始时间
               Row(
                 children: [
                   const Expanded(
-                    child: Text('开始日期'),
+                    child: Text('开始时间'),
                   ),
                   Expanded(
                     flex: 2,
                     child: OutlinedButton(
-                      onPressed: () => _selectDate(context),
-                      child: Text(_startDate.toLocal().toString().split(' ')[0]),
+                      onPressed: () => _selectDateTime(context),
+                      child: Text('${_startDate.toLocal().toString().split(' ')[0]} ${_startDate.hour.toString().padLeft(2, '0')}:${_startDate.minute.toString().padLeft(2, '0')}'),
                     ),
                   ),
                 ],
@@ -329,26 +342,6 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              // 每次消耗的金钱
-              TextFormField(
-                controller: _moneyController,
-                decoration: const InputDecoration(
-                  labelText: '每次消耗的金钱',
-                  hintText: '例如：10.0',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              // 每次消耗的时间
-              TextFormField(
-                controller: _timeController,
-                decoration: const InputDecoration(
-                  labelText: '每次消耗的时间（分钟）',
-                  hintText: '例如：30',
-                ),
-                keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
               // 备注
