@@ -55,11 +55,15 @@ class _HabitCardState extends State<HabitCard> {
       updatedAt: DateTime.now(),
     ));
     
+    if (allMarks.isEmpty) {
+      return '0分';
+    }
+    
     // 找到最近的标记日期（最新的标记日期）
-    DateTime latestMarkedDay = widget.habit.startDate;
-    for (var mark in allMarks) {
-      if (mark.date.isAfter(latestMarkedDay)) {
-        latestMarkedDay = mark.date;
+    DateTime latestMarkedDay = allMarks.first.date;
+    for (MarkedDay markedDay in allMarks) {
+      if (markedDay.date.isAfter(latestMarkedDay)) {
+        latestMarkedDay = markedDay.date;
       }
     }
     
@@ -218,29 +222,7 @@ class _HabitCardState extends State<HabitCard> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                // 今天坚持住了按钮
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // 这里可以添加"今天坚持住了"的功能
-                      // 暂时显示一个提示
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('今天坚持住了！继续加油！'),
-                          backgroundColor: Color(widget.habit.color),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(widget.habit.color),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('今天坚持住了'),
-                  ),
-                ),
+
               ],
             ),
           ),

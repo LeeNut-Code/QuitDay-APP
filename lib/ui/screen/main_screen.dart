@@ -25,12 +25,11 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('QuitDay', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_backup_restore, color: Colors.grey),
+            icon: Icon(Icons.settings_backup_restore, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             onPressed: () {
               context.pushNamed('backup');
             },
@@ -38,7 +37,7 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       body: Container(
-        color: Colors.grey[50],
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Consumer<HabitProvider>(
           builder: (context, habitProvider, child) {
             if (habitProvider.isLoading) {
@@ -62,14 +61,14 @@ class _MainScreenState extends State<MainScreen> {
                       child: const Icon(Icons.check_circle, color: Colors.green, size: 60),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       '还没有添加习惯',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       '开始添加第一个习惯吧！',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton(
@@ -83,7 +82,7 @@ class _MainScreenState extends State<MainScreen> {
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      child: const Text('添加习惯', style: TextStyle(fontSize: 16)),
+                      child: const Text('添加习惯', style: TextStyle(fontSize: 16, color: Colors.white)),
                     ),
                   ],
                 ),

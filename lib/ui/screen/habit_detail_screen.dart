@@ -172,6 +172,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               painter: TimeWheelPainter(
                 progress: progress,
                 color: Color(habit.color),
+                backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.3),
               ),
             ),
           ),
@@ -181,18 +182,19 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
             children: [
               Text(
                 timeDisplay,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 '/ $rangeDisplay',
-                style: const TextStyle(fontSize: 18, color: Colors.grey),
+                style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
               Text(
                 '已坚持',
-                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 16),
               ),
             ],
           ),
@@ -209,11 +211,11 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -227,7 +229,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left, size: 24),
+                icon: Icon(Icons.chevron_left, size: 24, color: Theme.of(context).colorScheme.onSurface),
                 onPressed: () {
                   // 切换到上个月
                   setState(() {
@@ -239,10 +241,11 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 '${_currentDate.year}年${_currentDate.month}月',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right, size: 24),
+                icon: Icon(Icons.chevron_right, size: 24, color: Theme.of(context).colorScheme.onSurface),
                 onPressed: () {
                   // 切换到下个月，但不能超过当前月份
                   final nextMonth = DateTime(_currentDate.year, _currentDate.month + 1, 1);
@@ -265,7 +268,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 child: Text(
                   day,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
                 ),
               )
             ).toList(),
@@ -304,7 +307,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
               } else if (isMarkedDay) {
                 backgroundColor = Color(_habit!.color).withOpacity(0.3);
               } else if (isFutureDay) {
-                backgroundColor = Colors.grey[100];
+                backgroundColor = Theme.of(context).colorScheme.surface.withOpacity(0.7);
               }
               
               return GestureDetector(
@@ -318,7 +321,11 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                     child: Text(
                       '${date.day}',
                       style: TextStyle(
-                        color: isToday ? Colors.white : isFutureDay ? Colors.grey[400] : Colors.black,
+                        color: isToday 
+                            ? Colors.white 
+                            : isFutureDay 
+                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.4) 
+                                : Theme.of(context).colorScheme.onSurface,
                         fontWeight: isToday || isStartDate ? FontWeight.bold : FontWeight.normal,
                         fontSize: 16,
                       ),
@@ -342,7 +349,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                 ),
                 elevation: 0,
               ),
-              child: const Text('标记当前时间', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              child: Text('标记当前时间', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white)),
             ),
           ),
         ],
@@ -350,27 +357,96 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
     );
   }
 
+  /// 获取所有标记日期（包括开始日期）
+  List<DateTime> _getAllMarkedDates() {
+    if (_habit == null) return [];
+    
+    final allMarks = [..._markedDays.map((md) => md.date)];
+    allMarks.add(_habit!.startDate);
+    // 按时间排序
+    allMarks.sort((a, b) => a.compareTo(b));
+    return allMarks;
+  }
+
+  /// 格式化持续时间
+  String _formatDuration(Duration duration) {
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+    
+    if (days > 0) {
+      return '$days天${hours > 0 ? '$hours小时' : ''}${minutes > 0 ? '$minutes分钟' : ''}';
+    } else if (hours > 0) {
+      return '$hours小时${minutes > 0 ? '$minutes分钟' : ''}';
+    } else {
+      return '$minutes分钟';
+    }
+  }
+
+  /// 计算所有习惯间隔
+  List<Duration> _calculateIntervals() {
+    final allDates = _getAllMarkedDates();
+    final intervals = <Duration>[];
+    
+    for (int i = 1; i < allDates.length; i++) {
+      final interval = allDates[i].difference(allDates[i - 1]);
+      intervals.add(interval);
+    }
+    
+    return intervals;
+  }
+
   /// 绘制统计模块
   Widget _buildStatistics() {
     if (_habit == null) return const SizedBox();
 
     final habit = _habit!;
+    final allDates = _getAllMarkedDates();
+    final intervals = _calculateIntervals();
     
-    // 模拟统计数据
-    const longestInterval = '15天 8小时 30分钟';
-    const shortestInterval = '2天 4小时 15分钟';
-    const averageInterval = '7天 12小时 45分钟';
-    const lastInterval = '5天 6小时 20分钟';
+    // 开始时间：最早的标记时间
+    final startTime = allDates.isNotEmpty ? allDates.first : habit.startDate;
+    final startTimeText = '${startTime.toLocal().toString().split(' ')[0]} ${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')} ${_getWeekday(startTime.weekday)}';
+    
+    // 习惯间隔计算
+    String longestInterval = '无数据';
+    String shortestInterval = '无数据';
+    String averageInterval = '无数据';
+    String lastInterval = '无数据';
+    
+    if (intervals.isNotEmpty) {
+      // 最长习惯间隔
+      final maxInterval = intervals.reduce((a, b) => a > b ? a : b);
+      longestInterval = _formatDuration(maxInterval);
+      
+      // 最短习惯间隔
+      final minInterval = intervals.reduce((a, b) => a < b ? a : b);
+      shortestInterval = _formatDuration(minInterval);
+      
+      // 平均习惯间隔
+      final totalDuration = intervals.fold(Duration.zero, (sum, interval) => sum + interval);
+      final avgDuration = Duration(microseconds: totalDuration.inMicroseconds ~/ intervals.length);
+      averageInterval = _formatDuration(avgDuration);
+      
+      // 上一次的习惯间隔：计算倒数第一次标记和倒数第二次标记的间隔时间
+      if (intervals.length >= 1) {
+        final lastInt = intervals[intervals.length - 1];
+        lastInterval = _formatDuration(lastInt);
+      }
+    }
+    
+    // 计数器重置次数：所有标记时间的数量
+    final resetCount = _markedDays.length;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -380,11 +456,11 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('统计数据', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('统计数据', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 24),
           
           // 开始日期
-          _buildStatRow('开始日期', '${habit.startDate.toLocal().toString().split(' ')[0]} ${habit.startDate.hour}:${habit.startDate.minute.toString().padLeft(2, '0')} ${_getWeekday(habit.startDate.weekday)}'),
+          _buildStatRow('开始时间', startTimeText),
           const SizedBox(height: 16),
           
           // 最长间隔
@@ -404,23 +480,21 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
           const SizedBox(height: 16),
           
           // 重置次数
-          _buildStatRow('计时器重置次数', '$_resetCount'),
+          _buildStatRow('计数器重置次数', '$resetCount'),
         ],
       ),
     );
   }
-
   /// 构建统计行
   Widget _buildStatRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 16)),
+        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface)),
       ],
     );
   }
-
   /// 获取星期几
   String _getWeekday(int weekday) {
     final weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -720,30 +794,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
             
             const SizedBox(height: 30),
             
-            // 今天坚持住了按钮
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('今天已坚持！继续加油！'),
-                      backgroundColor: Color(habit.color),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(habit.color),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text('今天坚持住了', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
-              ),
-            ),
+
             
             // 统计模块
             _buildStatistics(),
@@ -760,8 +811,9 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
 class TimeWheelPainter extends CustomPainter {
   final double progress;
   final Color color;
+  final Color backgroundColor;
 
-  TimeWheelPainter({required this.progress, required this.color});
+  TimeWheelPainter({required this.progress, required this.color, required this.backgroundColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -770,7 +822,7 @@ class TimeWheelPainter extends CustomPainter {
     
     // 绘制背景圆环
     final backgroundPaint = Paint()
-      ..color = Colors.grey[200]!
+      ..color = backgroundColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 20;
     canvas.drawCircle(center, radius, backgroundPaint);

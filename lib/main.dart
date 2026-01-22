@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'provider/habit_provider.dart';
+import 'provider/theme_provider.dart';
 import 'router/app_router.dart';
 
 void main() {
@@ -12,16 +13,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => HabitProvider(),
-      child: MaterialApp.router(
-        title: 'QuitDay',
-        debugShowCheckedModeBanner: false, // 去除debug标记
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        ),
-        routerConfig: AppRouter.createRouter(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => HabitProvider()),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp.router(
+            title: 'QuitDay',
+            debugShowCheckedModeBanner: false, // 去除debug标记
+            theme: ThemeProvider.lightTheme,
+            darkTheme: ThemeProvider.darkTheme,
+            themeMode: themeProvider.themeMode,
+            routerConfig: AppRouter.createRouter(),
+          );
+        },
       ),
     );
   }
